@@ -1,24 +1,38 @@
 name: Sync Test Plan to Slides
+
 on:
   push:
     branches: [ main ]
     paths:
-      - '**.md'  # Only runs when you edit a markdown file
+      - 'LSS107-test-plan.md' # Only runs when this specific file is updated
 
 jobs:
-  transmit_data:
+  sync_to_google:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract Metadata and Send
+      - name: Extract Data and Post to Google
         run: |
-          # This script finds the Test ID and Hypothesis in your file
-          TEST_ID=$(grep "Test ID:" LSS107-test-plan.md | cut -d ':' -f 2 | xargs)
-          HYPOTHESIS=$(grep -A 1 "## 3. Hypothesis" LSS107-test-plan.md | tail -n 1 | xargs)
+          # 1. Extract the Test ID 
+          # Finds the line with "Test ID", removes the prefix and markdown formatting
+          TEST_ID=$(grep "Test ID:" LSS107-test-plan.md | sed 's/.*Test ID:\*\* //' | xargs)
           
-          # This sends it to your Google Web App
+          # 2. Extract the Hypothesis
+          # Grabs the text between the Hypothesis header and the next divider (---)
+          # 'sed' skips the first two lines (header and line) and the last line (divider)
+          HYPOTHESIS=$(sed -n '/## 3. Hypothesis/,/---/p' LSS107-test-plan.md | sed '1,2d;$d' | xargs)
+
+          # 3. Extract the Primary Owner (for extra credit!)
+          OWNER=$(grep "Primary Owner:" LSS107-test-plan.md | sed 's/.*Primary Owner:\*\* //' | xargs)
+
+          # 4. Log it in the GitHub console for debugging
+          echo "Syncing Test ID: $TEST_ID"
+          echo "Syncing Owner: $OWNER"
+
+          # 5. The "Handshake" with Google Slides
+          # This calls your Web App URL saved in GitHub Secrets
           curl -L -X POST "${{ secrets.GOOGLE_WEBAPP_URL }}" \
           -H "Content-Type: application/json" \
-          -d "{\"test_id\":\"$TEST_ID\", \"hypothesis\":\"$HYPOTHESIS\"}"
+          -d "{\"test_id\":\"$TEST_ID\", \"hypothesis\":\"$HYPOTHESIS\", \"owner\":\"$OWNER\"}"
