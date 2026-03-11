@@ -1,0 +1,24 @@
+name: Sync Test Plan to Slides
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.md'  # Only runs when you edit a markdown file
+
+jobs:
+  transmit_data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Metadata and Send
+        run: |
+          # This script finds the Test ID and Hypothesis in your file
+          TEST_ID=$(grep "Test ID:" LSS107-test-plan.md | cut -d ':' -f 2 | xargs)
+          HYPOTHESIS=$(grep -A 1 "## 3. Hypothesis" LSS107-test-plan.md | tail -n 1 | xargs)
+          
+          # This sends it to your Google Web App
+          curl -L -X POST "${{ secrets.GOOGLE_WEBAPP_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"test_id\":\"$TEST_ID\", \"hypothesis\":\"$HYPOTHESIS\"}"
